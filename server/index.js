@@ -7,12 +7,33 @@ import express from 'express'
 
 import App from '../src/App'
 
+import reducer from '../reducers/'
+
 const PORT = 3005
 const app = express()
 
+// redux stuff
+import { Provider } from 'react-redux'
+import { createStore } from 'redux'
 
 app.get('/', (req, res) => {
-    const app = ReactDOMServer.renderToString(<App />)
+    // const app = ReactDOMServer.renderToString(<App />)
+    //  === REDUX ===
+
+    const store = createStore(reducer)
+
+    const app = ReactDOMServer.renderToString(
+        <Provider store={store}>
+            <App />
+        </Provider>
+    )
+
+    // initial state of Redux store
+    const preloadedState = store.getState()
+
+    console.log("preloadedState: ", preloadedState)
+
+    // ==============
 
     console.log("static React: ", app)
 
@@ -26,7 +47,7 @@ app.get('/', (req, res) => {
             return res.status(500).send('Opps')
         }
 
-        console.log("data: >>>>", data)
+        console.log("#### HTML file: >>>>", data)
 
         console.log("<<<<<<<<")
 
@@ -34,10 +55,22 @@ app.get('/', (req, res) => {
         // the send as response 
 
         const ssrOutput = data.replace('<div id="app"></div>',
-        `<div id="app">${app}</div>
-        <div>SSR!</div>`)
+            `
+            <div id="app">${app}</div>
+            <hr />
+            <div>SSR!</div>
 
-        console.log(ssrOutput)
+            <script>
+            // WARNING: See the following for security issues around embedding JSON in HTML:
+            // https://redux.js.org/usage/server-rendering#security-considerations
+            window.__PRELOADED_STATE__ = ${JSON.stringify(preloadedState).replace(
+            /</g,
+            '\\u003c'
+            )}
+            </script>
+            `)
+
+        console.log("### ssrOutput: ", ssrOutput)
 
         return res.send(ssrOutput)
     })
